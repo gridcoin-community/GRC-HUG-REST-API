@@ -1,0 +1,11 @@
+beaconreport
+beaconstatus [cpid]
+cpids
+currentneuralhash
+currentneuralreport
+getmininginfo
+magnitude <cpid>
+neuralreport
+superblockage
+upgradedbeaconreport
+validcpids

@@ -1,0 +1,25 @@
+addnode <node> <add|remove|onetry>
+addpoll <title> <days> <question> <answers> <sharetype> <url>
+askforoutstandingblocks
+currenttime
+getbestblockhash
+getblock <hash> [bool:txinfo]
+getblockbynumber <number> [bool:txinfo]
+getblockchaininfo
+getblockcount
+getblockhash <index>
+getconnectioncount
+getdifficulty
+getinfo
+getnettotals
+getnetworkinfo
+getpeerinfo
+getrawmempool
+listallpolldetails
+listallpolls
+listpolldetails
+listpollresults <pollname> [bool:showexpired]
+listpolls
+networktime
+showblock <index>
+votedetails <pollname>

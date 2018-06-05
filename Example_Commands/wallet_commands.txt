@@ -1,0 +1,12 @@
+getaccount <gridcoinaddress>
+getaccountaddress <account>
+getaddressesbyaccount <account>
+getbalance ( "account" minconf includeWatchonly )
+getrawtransaction <txid> [verbose=bool]
+getreceivedbyaddress <Gridcoinaddress> [minconf=1]
+gettransaction "txid"
+getwalletinfo
+listsinceblock ( "blockhash" target-confirmations includeWatchonly)
+validateaddress <gridcoinaddress>
+validatepubkey <gridcoinpubkey>
+verifymessage <Gridcoinaddress> <signature> <message>

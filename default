@@ -1,0 +1,17 @@
+server {
+    listen 80;
+    return 301 https://$host$request_uri;
+}
+
+server {
+  listen 443 ssl;
+  server_name grcapi.domain.tld; # Change!
+
+  client_max_body_size 4G;
+  keepalive_timeout 5;
+
+  location / {
+    proxy_set_header Host $host;
+    proxy_pass http://unix:/home/grcapi/hug.sock;
+  }
+}

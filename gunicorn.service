@@ -1,0 +1,14 @@
+[Unit]
+Description=Gunicorn instance to serve HUG
+After=network.target
+
+[Service]
+PIDFile=/home/grcapi/pid
+User=grcapi
+Group=www-data
+WorkingDirectory=/home/grcapi/
+Environment="PATH=/home/grcapi/HUG/bin/"
+ExecStart=/home/grcapi/HUG/bin/gunicorn -b unix:/home/grcapi/hug.sock --pid /home/grcapi/pid --error-logfile /home/grcapi/gunicorn_error_log --access-logfile /home/grcapi/gunicorn_access_log --timeout 10 --workers=4  hug_script:__hug_wsgi__
+
+[Install]
+WantedBy=multi-user.target
