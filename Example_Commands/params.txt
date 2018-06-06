@@ -1,0 +1,22 @@
+# Read-only commands which require parameter inputs
+
+getaccount <gridcoinaddress>
+getaccountaddress <account>
+getaddressesbyaccount <account>
+getbalance ( "account" minconf includeWatchonly )
+getrawtransaction <txid> [verbose=bool]
+getreceivedbyaddress <Gridcoinaddress> [minconf=1]
+gettransaction "txid"
+listsinceblock ( "blockhash" target-confirmations includeWatchonly)
+validateaddress <gridcoinaddress>
+validatepubkey <gridcoinpubkey>
+verifymessage <Gridcoinaddress> <signature> <message>
+
+getblock <hash> [bool:txinfo]
+getblockbynumber <number> [bool:txinfo]
+getblockhash <index>
+listpollresults <pollname> [bool:showexpired]
+showblock <index>
+votedetails <pollname>
+
+beaconstatus [cpid]

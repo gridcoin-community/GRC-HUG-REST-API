@@ -1,9 +1,17 @@
+# read-only commands which don't require any parameters
+
+beaconreport
+currentneuralhash
+currentneuralreport
+getmininginfo
+neuralreport
+superblockage
+upgradedbeaconreport
+validcpids
+
 getbestblockhash
-getblock <hash> [bool:txinfo]
-getblockbynumber <number> [bool:txinfo]
 getblockchaininfo
 getblockcount
-getblockhash <index>
 getconnectioncount
 getdifficulty
 getinfo
@@ -14,8 +22,7 @@ getrawmempool
 listallpolldetails
 listallpolls
 listpolldetails
-listpollresults <pollname> [bool:showexpired]
 listpolls
 networktime
-showblock <index>
-votedetails <pollname>
+
+getwalletinfo

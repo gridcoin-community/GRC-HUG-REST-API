@@ -47,16 +47,51 @@ def request_json(input_method, input_parameters):
 		# Connection to the Gridcoin node failed, return failure
 		return None
 
-@hug.get(examples='api_key=API_KEY')
-def get_info(api_key: hug.types.text, hug_timer=20):
-	"""Return 'getinfo' data from the Gridcoin Research client!"""
+@hug.get(examples='api_key=API_KEY, function=FUNCTION_NAME')
+def grc_command(api_key: hug.types.text, function: hug.types.text, hug_timer=20):
+	"""Generic HUG function for all read-only Gridcoin commands which don't require any input parameters."""
 	if (api_key == api_auth_key):
 		# Valid API Key!
-		response = request_json("getinfo", None)
-		if (response == None):
-			return {'success': False, 'api_key': True}
+
+		valid_functions = [
+		    "beaconreport",
+		    "currentneuralhash",
+		    "currentneuralreport",
+		    "getmininginfo",
+		    "neuralreport",
+		    "superblockage",
+		    "upgradedbeaconreport",
+		    "validcpids",
+		    "getbestblockhash",
+		    "getblockchaininfo",
+		    "getblockcount",
+		    "getconnectioncount",
+		    "getdifficulty",
+		    "getinfo",
+		    "getnettotals",
+		    "getnetworkinfo",
+		    "getpeerinfo",
+		    "getrawmempool",
+		    "listallpolldetails",
+		    "listallpolls",
+		    "listpolldetails",
+		    "listpolls",
+		    "networktime",
+		    "getwalletinfo"
+		]
+
+		if (function in valid_functions):
+			# User requested a valid read-only parameter-free GRC function
+			response = request_json(function, None)
+			if (response == None):
+				# Something went wrong!
+				return {'success': False, 'api_key': True, 'hug_error_message': 'GRC client error.'}
+			else:
+				# Successful GRC command execution
+				return {'success': True, 'api_key': True, 'result': response, 'time_taken': hug_timer, 'hug_error_message': ''}
 		else:
-			return {'success': True, 'api_key': True, 'result': response, 'time_taken': hug_timer}
+			# User requested an invalid function
+			return {'success': False, 'api_key': True, 'hug_error_message': 'Invalid GRC command requested by user.'}
 	else:
 		# Invalid API Key!
-		return {'success': False, 'api_key': False}
+		return {'success': False, 'api_key': False, 'hug_error_message': 'Invalid API key input.'}
