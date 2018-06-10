@@ -115,29 +115,47 @@ This section will detail the functionality which will be available to the public
 
 The functions are currently all read-only functions, enabling the public to request data from the network without the risk of exposing critical wallet controls.
 
-## Mining
+## grc_command
 
-Mining commands.
+All GRC functions which don't require any input parameters can be called through this function.
 
-### function
+### Parameters
 
-function description
+#### function `string`
 
-##### Parameters
+```
+beaconreport
+currentneuralhash
+currentneuralreport
+getmininginfo
+neuralreport
+superblockage
+upgradedbeaconreport
+validcpids
+getbestblockhash
+getblockchaininfo
+getblockcount
+getconnectioncount
+getdifficulty
+getinfo
+getnettotals
+getnetworkinfo
+getpeerinfo
+getrawmempool
+listallpolldetails
+listallpolls
+listpolldetails
+listpolls
+networktime
+getwalletinfo
+```
 
-* example_parameter `string`
-* api_key `string`
+#### api_key `string`
 
-##### Usage
-`https://subdomain.domain.tld/function?example_parameter=12345&api_key=123abc`
+#### Usage
+`https://subdomain.domain.tld/grc_command?api_key=123abc&function=getinfo`
 
-#### [Run: Production command]()
-#### [Run: Testnet command]()
+##### [Run: Production command](#)
+##### [Run: Testnet command](#)
 
-## Network
-
-Network command.
-
-## Wallet
-
-Wallet commands.
+---
