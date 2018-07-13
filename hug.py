@@ -1,6 +1,13 @@
+from bs4 import BeautifulSoup
+import gzip
 import hug
-import requests
 import json
+import msgpack
+from multiprocessing import Pool
+import requests
+import time
+import xmltodict
+
 
 # Configured in the gridcoinresearch.conf file:
 rpcuser="rpcusernametesting1337"
@@ -15,10 +22,11 @@ api_auth_key = "123abc" # Change to whatever you want - improves security!
 
 # API preferences
 hide_ip_addresses=True # IP addresses are shown in several commands, if true we'll hide this information!
+WORKER_COUNT = 4 # Add CPUs & increase this value to supercharge processing downloaded project XML data!
 
 def request_json(input_method, input_parameters, timer, api_key):
 	"""Request JSON data from the GRC full node, given the target command & relevant input parameters.
-	   More info: http://docs.python-requests.org/en/master/"""
+	   More info: http://docs.python-.org/en/master/"""
 
 	if (api_key != api_auth_key):
 		# User provied an invalid API key!
@@ -67,6 +75,93 @@ def request_json(input_method, input_parameters, timer, api_key):
 	except requests.exceptions.ConnectionError:
 		# Connection to the Gridcoin node failed, return failure
 		return {'success': False, 'api_key': True, 'time_taken': timer, 'hug_error_message': 'GRC client error.'}
+
+def return_json_file_contents(json_file_name):
+	"""
+	Simple function for returning the contents of the input JSON file
+	"""
+	with open(json_file_name) as json_contents:
+    	return json.load(json_contents)
+
+def scrape_gridcoinstats_for_whitelist():
+	"""
+	A function to scrape gridcoinstats.eu for the active whitelist.
+	"""
+	scraped_page = requests.get("https://gridcoinstats.eu/project")
+	if scraped_page.status_code == 200:
+		soup = BeautifulSoup(scraped_page.text, 'html.parser')
+		whitelist_table = soup.find('table', attrs={'id': 'whiteProjects'})
+		whitelist_rows = whitelist_table.findAll('span', attrs={'class': 'hideOnMobile'})
+
+		whitelisted_urls = []
+		for row in whitelist_rows:
+			temp_str = str(row)
+			tsl = temp_str.split('<a href="')
+			url = (tsl[1].split('" target'))[0]
+
+			whitelisted_urls.append(url)
+		return whitelisted_urls
+	else:
+		return None
+
+def extract_xml_step(xml_row):
+    """
+    Multiprocessing the extraction of key info from selected xml items!
+    TODO: Handle varying XML format (different contents, validation, etc..)
+    """
+    return {'id': xml_row['id'], 'total_credit': xml_row['total_credit'], 'expavg_credit': xml_row['expavg_credit'], 'cpid': xml_row['cpid']}
+
+def download_extract_stats(project_url):
+    """
+    Download an xml.gz, extract gz, parse xml, reduce & return data.
+    """
+    downloaded_file = requests.get(project_url, stream=True)
+    if downloaded_file.status_code == 200:
+        # Worked
+        if '.gz' in project_url:
+            # Compressed!
+            with gzip.open(downloaded_file.raw, 'rb') as uncompressed_file:
+                file_content = xmltodict.parse(uncompressed_file.read())
+        else:
+            # Not compressed!
+            file_content = xmltodict.parse(downloaded_file.text) # Not confirmed
+
+        # print("len: {}".format(len(file_content['users']['user'])))
+
+        pool = Pool(processes=WORKER_COUNT) # 4 workers
+        pool_xml_data = pool.map(extract_xml_step, file_content['users']['user']) # Deploy the pool workers
+        msg_packed_results = msgpack.packb(pool_xml_data, use_bin_type=True)
+        # unpacked_results = msgpack.unpackb(msg_packed_results, raw=False)
+        return msg_packed_results
+    else:
+        print(downloaded_file.status_code)
+        print("FAIL")
+        # Didn't work
+        return None
+
+#####################
+
+project_settings = return_json_file_contents('init_projects.json')
+
+"""
+{
+"project_name": "SETI@Home",
+"last_scan_timestamp": 0, # By default
+"whitelist_status": false, # By default
+"user_gz_url": "https://setiweb.ssl.berkeley.edu/stats/user.gz"
+}
+"""
+
+# TODO: Take the above 'project_settings'
+
+
+#####################
+
+@hug.get(examples='')
+def project_user_stats(api_key: hug.types.text, project_name: hug.types.text, hug_timer=20):
+	"""Provide BOINC project user statistics."""
+
+#####################
 
 @hug.get(examples='api_key=API_KEY, function=FUNCTION_NAME')
 def grc_command(api_key: hug.types.text, function: hug.types.text, hug_timer=20):
