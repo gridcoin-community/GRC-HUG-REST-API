@@ -1,158 +1,106 @@
 [
     {
       "project_name": "SETI@Home",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://setiweb.ssl.berkeley.edu/stats/user.gz"
     },
     {
       "project_name": "Einstein@Home",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://einstein.phys.uwm.edu/stats/user_id.gz"
     },
     {
       "project_name": "CPDN",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://climateapps2.oucs.ox.ac.uk/cpdnboinc/stats/user.xml.gz"
     },
     {
       "project_name": "Rosetta@Home",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://boinc.bakerlab.org/rosetta/stats/user.gz"
     },
     {
       "project_name": "BURP",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://burp.boinc.dk/stats/user_id.gz"
     },
     {
       "project_name": "CSGrid",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://csgrid.org/csg/stats/user.gz"
     },
     {
       "project_name": "Collatz",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://boinc.thesonntags.com/collatz/stats/user.gz"
     },
     {
       "project_name": "POEM",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://boinc.fzk.de/poem/stats/user.gz"
     },
     {
       "project_name": "Milkyway@Home",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://milkyway.cs.rpi.edu/milkyway/stats/user.gz"
     },
     {
       "project_name": "Asteroids@Home",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://asteroidsathome.net/boinc/stats/user.gz"
     },
     {
       "project_name": "GPUGRID",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "https://www.gpugrid.net/stats/user.gz"
     },
     {
       "project_name": "Moowrap",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://moowrap.net/stats/user.gz"
     },
     {
       "project_name": "Leiden Classical",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://boinc.gorlaeus.net/stats/user.xml.gz"
     },
     {
       "project_name": "CPDN",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://bbc.cpdn.org/stats/user.xml.gz"
     }
     {
       "project_name": "SZTaki",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://szdg.lpds.sztaki.hu/szdg/stats/user.xml.gz"
     },
     {
       "project_name": "PrimeGrid",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://www.primegrid.com/stats/user_id.gz"
     },
     {
       "project_name": "theskynet POGS",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "https://pogs.theskynet.org/pogs/stats/user.gz"
     },
     {
       "project_name": "NumberFields",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://numberfields.asu.edu/NumberFields/stats/user.gz"
     },
     {
       "project_name": "NFS",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "https://escatter11.fullerton.edu/nfs/stats/user.gz"
     },
     {
       "project_name": "MindModeling",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "https://mindmodeling.org/stats/user.gz"
     },
     {
       "project_name": "Cosmology@Home",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://www.cosmologyathome.org/stats/user.gz"
     },
     {
       "project_name": "Find@Home",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://findah.ucd.ie/stats/user.gz"
     },
     {
       "project_name": "YAFU",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://yafu.myfirewall.org/yafu/stats/user.gz"
     },
     {
       "project_name": "YOYO@Home",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://www.rechenkraft.net/yoyo/stats/user.gz"
     },
     {
       "project_name": "SAT@Home",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://sat.isa.ru/pdsat/stats/user.gz"
     },
     {
       "project_name": "ATLAS@Home",
-      "last_scan_timestamp": 0,
-      "whitelist_status": false,
       "user_gz_url": "http://atlasathome.cern.ch/stats/user.gz"
     }
 ]
