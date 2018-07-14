@@ -24,7 +24,7 @@ api_auth_key = "123abc" # Change to whatever you want - improves security!
 # API preferences
 hide_ip_addresses=True # IP addresses are shown in several commands, if true we'll hide this information!
 WORKER_COUNT = 4 # Add CPUs & increase this value to supercharge processing downloaded project XML data!
-MAX_STATS_LIFETIME = 3600 # Max seconds since last
+MAX_STATS_LIFETIME = 21600 # Max seconds since last
 
 def request_json(input_method, input_parameters, timer, api_key):
 	"""Request JSON data from the GRC full node, given the target command & relevant input parameters.
@@ -147,12 +147,13 @@ def download_extract_stats(project_name, project_url):
 		now = pendulum.now() # Getting the time (SIGIR)
 		current_timestamp = int(round(now.timestamp())) # Converting to timestamp (SIGIR)
 
-		if (int(current_timestamp - existing_json['timestamp']) < MAX_STATS_LIFETIME):
-			print("Within lifetime")
+		if (current_timestamp - int(existing_json['timestamp']) < MAX_STATS_LIFETIME):
 			"""Data is still valid - let's return it instead of fetching it!"""
-			#json_data = msgpack.packb(existing_json['json_data'], use_bin_type=True)
-			#return json_data
+			print("Within lifetime")
 			return existing_json['json_data']
+		else:
+			"""No existing file"""
+			print("{} stats too old - downloading fresh copy!".format(project_name))
 
 	"""No existing file - let's download and process it!"""
 	print("Downloading {}".format(project_name))

@@ -28,10 +28,6 @@
       "user_gz_url": "http://boinc.thesonntags.com/collatz/stats/user.gz"
     },
     {
-      "project_name": "POEM",
-      "user_gz_url": "http://boinc.fzk.de/poem/stats/user.gz"
-    },
-    {
       "project_name": "Milkyway@Home",
       "user_gz_url": "http://milkyway.cs.rpi.edu/milkyway/stats/user.gz"
     },
