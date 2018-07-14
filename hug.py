@@ -2,12 +2,11 @@ from bs4 import BeautifulSoup
 import gzip
 import hug
 import json
-#import ujson
 import msgpack
-from multiprocessing import Pool
 from pathlib import Path
 import pendulum
 import requests
+import sys
 import time
 import xmltodict
 
@@ -121,36 +120,42 @@ def extract_xml_step(xml_row):
 	Multiprocessing the extraction of key info from selected xml items!
 	TODO: Handle varying XML format (different contents, validation, etc..)
 	"""
-	temp_obj = {}
-	if hasattr(xml_row, 'id') and hasattr(xml_row, 'total_credit') and hasattr(xml_row, 'expavg_credit') and hasattr(xml_row, 'cpid') and hasattr(xml_row, 'id'):
-		if (xml_row['expavg_credit'] > 1):
+	if (xml_row.get('id', None) != None) and (xml_row.get('total_credit', None) != None) and (xml_row.get('expavg_credit', None) != None) and (xml_row.get('cpid', None) != None):
+		#print("attr exists")
+		if (float(xml_row['expavg_credit']) > 1):
 			# To save resources we're only going to provide stats for active users
 			return {'id': xml_row['id'], 'total_credit': xml_row['total_credit'], 'expavg_credit': xml_row['expavg_credit'], 'cpid': xml_row['cpid']}
 		else:
 			# Filtered out
-			return {}
+			return None
 	else:
+		print("attr doesn't exist")
 		# filtered out
-		return {}
+		return None
 
 def download_extract_stats(project_name, project_url):
 	"""
 	Download an xml.gz, extract gz, parse xml, reduce & return data.
 	"""
-	file_path = "./STATS_DUMP/"+project_name
+	file_path = "./STATS_DUMP/"+project_name+".json"
 	existing_file_check = Path(file_path)
 	if existing_file_check.is_file():
+		print("File existed!")
+		"""File exists - check its contents"""
 		existing_json = return_json_file_contents(file_path)
 
 		now = pendulum.now() # Getting the time (SIGIR)
 		current_timestamp = int(round(now.timestamp())) # Converting to timestamp (SIGIR)
 
 		if (int(current_timestamp - existing_json['timestamp']) < MAX_STATS_LIFETIME):
-			# Data is still valid - let's return it instead of fetching it!
-			msg_packed_results = msgpack.packb(existing_json['json_data'], use_bin_type=True)
-			return msg_packed_results
+			print("Within lifetime")
+			"""Data is still valid - let's return it instead of fetching it!"""
+			#json_data = msgpack.packb(existing_json['json_data'], use_bin_type=True)
+			#return json_data
+			return existing_json['json_data']
 
-	### No appropriate existing file - let's download and process it!
+	"""No existing file - let's download and process it!"""
+	print("Downloading {}".format(project_name))
 
 	downloaded_file = requests.get(project_url, stream=True)
 	if downloaded_file.status_code == 200:
@@ -165,21 +170,29 @@ def download_extract_stats(project_name, project_url):
 
 		# print("len: {}".format(len(file_content['users']['user'])))
 
-		pool = Pool(processes=WORKER_COUNT) # 4 workers
-		pool_xml_data = pool.map(extract_xml_step, file_content['users']['user']) # Deploy the pool workers
-		pool.terminate()
-		filter(None, pool_xml_data) # Removing failed elements
+		#pool = Pool(processes=WORKER_COUNT) # 4 workers
+		#pool_xml_data = pool.map(extract_xml_step, file_content['users']['user']) # Deploy the pool workers
+		#pool.terminate()
+		#filter(None, pool_xml_data) # Removing failed elements
+
+		xml_data = []
+		for user in file_content['users']['user']:
+			xml_contents = extract_xml_step(user)
+			if xml_contents == None:
+				# Filter it out
+				continue
+			else:
+				# Success!
+				xml_data.append(xml_contents)
 
 		now = pendulum.now() # Getting the time (SIGIR)
 		current_timestamp = int(round(now.timestamp())) # Converting to timestamp (SIGIR)
-		write_json_to_disk('./STATS_DUMP/' + project_name + '.json', {'json_data': pool_xml_data, 'timestamp': current_timestamp}) # Storing to disk
+		write_json_to_disk('./STATS_DUMP/' + project_name + '.json', {'json_data': xml_data, 'timestamp': current_timestamp}) # Storing to disk
 
-		msg_packed_results = msgpack.packb(pool_xml_data, use_bin_type=True)
-		# unpacked_results = msgpack.unpackb(msg_packed_results, raw=False)
-		return msg_packed_results
+		#msg_packed_results = msgpack.packb(xml_data, use_bin_type=True)
+		return xml_data
 	else:
-		print(downloaded_file.status_code)
-		print("FAIL")
+		print("ERROR: {}".format(project_name))
 		# Didn't work
 		return None
 
@@ -200,14 +213,12 @@ def initialize_project_data():
 	"""
 	processed_project_data = []
 
-	for project in initial_project_json[:3]: # TODO: REMOVE ':3'
+	for project in initial_project_json: # TODO: REMOVE ':3'
 		temp_project_holder = project # Can we just reference project?
-		print("Downloading {}".format(project['project_name']))
-
-		msgpacked_results = download_extract_stats(project['project_name'], project['user_gz_url'])
-		if (msgpacked_results != None):
-			print("Downloaded {}".format(project['project_name']))
-			temp_project_holder['msgpacked_results'] = msgpacked_results
+		print("Checking {}".format(project['project_name']))
+		json_data = download_extract_stats(project['project_name'], project['user_gz_url'])
+		if (json_data != None):
+			temp_project_holder['json_data'] = json_data
 		else:
 			print("Failed to download: {}".format(project['project_name']))
 			continue
@@ -220,15 +231,28 @@ fully_processed_project_data = initialize_project_data()
 
 #####################
 
-@hug.get(examples='api_key=API_KEY&project_name=SETI@Home')
-def project_user_stats(api_key: hug.types.text, project_name: hug.types.text, hug_timer=20):
-	"""Provide BOINC project user statistics."""
-	return {'data': fully_processed_project_data, 'success': True, 'api_key': True, 'time_taken': hug_timer}
+@hug.get(examples='api_key=API_KEY&format=JSON')
+def user_stats(api_key: hug.types.text, format: hug.types.text, hug_timer=3):
+	"""Provide BOINC project user statistics. Format can be either JSON or MSGPACK"""
+
+	if (api_key != api_auth_key):
+		# User provied an invalid API key!
+		return {'success': False, 'api_key': False, 'took': float(hug_timer), 'hug_error_message': 'Invalid API key input.'}
+
+	if format == "JSON":
+		return {'project_json': fully_processed_project_data, 'success': True, 'api_key': True, 'took': float(hug_timer)}
+	elif format == "MSGPACK":
+		msgpacked_data = []
+		for project in fully_processed_project_data:
+			msgpack_contents = msgpack.packb(project['json_data'], use_bin_type=True)
+			msgpacked_data.append({'project': project['project_name'], 'msgpacked_data': str(msgpack_contents)})
+
+		return {'project_msgpack': msgpacked_data, 'success': True, 'api_key': True, 'took': float(hug_timer)}
 
 #####################
 
 @hug.get(examples='api_key=API_KEY, function=FUNCTION_NAME')
-def grc_command(api_key: hug.types.text, function: hug.types.text, hug_timer=20):
+def grc_command(api_key: hug.types.text, function: hug.types.text, hug_timer=3):
 	"""Generic HUG function for all read-only Gridcoin commands which don't require any input parameters."""
 	valid_functions = [
 		# Only add read-only parameter-free gridcoinresearch commands to this list
@@ -263,14 +287,14 @@ def grc_command(api_key: hug.types.text, function: hug.types.text, hug_timer=20)
 		return request_json(function, None, hug_timer, api_key)
 	else:
 		# User requested an invalid function
-		return {'success': False, 'api_key': True, 'time_taken': hug_timer, 'hug_error_message': 'Invalid GRC command requested by user.'}
+		return {'success': False, 'api_key': True, 'took': float(hug_timer), 'hug_error_message': 'Invalid GRC command requested by user.'}
 
 """
 NOTE: Below this point the HUG functions require user input!
 """
 
 @hug.get(examples='api_key=API_KEY, txid=transactionId')
-def getrawtransaction(api_key: hug.types.text, txid: hug.types.text, hug_timer=20):
+def getrawtransaction(api_key: hug.types.text, txid: hug.types.text, hug_timer=3):
 	"""getrawtransaction <txid> [verbose=bool]"""
 	# Valid API Key!
 	parameters = {
@@ -279,7 +303,7 @@ def getrawtransaction(api_key: hug.types.text, txid: hug.types.text, hug_timer=2
 	return request_json("getrawtransaction", parameters, hug_timer, api_key)
 
 @hug.get(examples='api_key=API_KEY, address=GRCAddress, minconf=1')
-def getreceivedbyaddress(api_key: hug.types.text, address: hug.types.text, minconf: hug.types.number=1, hug_timer=20):
+def getreceivedbyaddress(api_key: hug.types.text, address: hug.types.text, minconf: hug.types.number=1, hug_timer=3):
 	"""getreceivedbyaddress <Gridcoinaddress> [minconf=1]"""
 	# Valid API Key!
 	parameters = {
@@ -289,7 +313,7 @@ def getreceivedbyaddress(api_key: hug.types.text, address: hug.types.text, minco
 	return request_json("getreceivedbyaddress", parameters, hug_timer, api_key)
 
 @hug.get(examples='api_key=API_KEY, txid=grctxid')
-def gettransaction(api_key: hug.types.text, txid: hug.types.text, hug_timer=20):
+def gettransaction(api_key: hug.types.text, txid: hug.types.text, hug_timer=3):
 	"""gettransaction "txid" """
 	# Valid API Key!
 	parameters = {
@@ -298,7 +322,7 @@ def gettransaction(api_key: hug.types.text, txid: hug.types.text, hug_timer=20):
 	return request_json("gettransaction", parameters, hug_timer, api_key)
 
 @hug.get(examples='api_key=API_KEY, blockhash=grctxid, target_confirmations=1, includeWatchonly=True')
-def listsinceblock(api_key: hug.types.text, blockhash: hug.types.text, target_confirmations: hug.types.number=1, hug_timer=20):
+def listsinceblock(api_key: hug.types.text, blockhash: hug.types.text, target_confirmations: hug.types.number=1, hug_timer=3):
 	"""listsinceblock ( "blockhash" target-confirmations includeWatchonly)"""
 	# Valid API Key!
 	parameters = {
@@ -309,7 +333,7 @@ def listsinceblock(api_key: hug.types.text, blockhash: hug.types.text, target_co
 	return request_json("listsinceblock", parameters, hug_timer, api_key)
 
 @hug.get(examples='api_key=API_KEY, address=grcaddress')
-def validateaddress(api_key: hug.types.text, address: hug.types.text, hug_timer=20):
+def validateaddress(api_key: hug.types.text, address: hug.types.text, hug_timer=3):
 	"""validateaddress <gridcoinaddress>"""
 	parameters = {
 	'gridcoinaddress': address
@@ -317,7 +341,7 @@ def validateaddress(api_key: hug.types.text, address: hug.types.text, hug_timer=
 	return request_json("validateaddress", parameters, hug_timer, api_key)
 
 @hug.get(examples='api_key=API_KEY, pubkey=grctxid')
-def validatepubkey(api_key: hug.types.text, pubkey: hug.types.text, hug_timer=20):
+def validatepubkey(api_key: hug.types.text, pubkey: hug.types.text, hug_timer=3):
 	"""validatepubkey <gridcoinpubkey>"""
 	parameters = {
 	'gridcoinpubkey': pubkey
@@ -325,7 +349,7 @@ def validatepubkey(api_key: hug.types.text, pubkey: hug.types.text, hug_timer=20
 	return request_json("validatepubkey", parameters, hug_timer, api_key)
 
 @hug.get(examples='api_key=API_KEY, address=grcaddress, signature=examplesigtext, message=examplemessage')
-def verifymessage(api_key: hug.types.text, signature: hug.types.text, message: hug.types.text, hug_timer=20):
+def verifymessage(api_key: hug.types.text, signature: hug.types.text, message: hug.types.text, hug_timer=3):
 	"""verifymessage <Gridcoinaddress> <signature> <message>"""
 	parameters = {
 	'Gridcoinaddress': address,
@@ -335,7 +359,7 @@ def verifymessage(api_key: hug.types.text, signature: hug.types.text, message: h
 	return request_json("verifymessage", parameters, hug_timer, api_key)
 
 @hug.get(examples='api_key=API_KEY, hash=grctxid, extra_info=true')
-def getblock(api_key: hug.types.text, hash: hug.types.text, extra_info: hug.types.smart_boolean=0, hug_timer=20):
+def getblock(api_key: hug.types.text, hash: hug.types.text, extra_info: hug.types.smart_boolean=0, hug_timer=3):
 	"""getblock <hash> [bool:txinfo]"""
 	parameters = {
 	'hash': hash,
@@ -344,7 +368,7 @@ def getblock(api_key: hug.types.text, hash: hug.types.text, extra_info: hug.type
 	return request_json("getblock", parameters, hug_timer, api_key)
 
 @hug.get(examples='api_key=API_KEY, index=50')
-def getblockhash(api_key: hug.types.text, index: hug.types.number, hug_timer=20):
+def getblockhash(api_key: hug.types.text, index: hug.types.number, hug_timer=3):
 	"""getblockhash <index>"""
 	parameters = {
 	'index': index
@@ -352,7 +376,7 @@ def getblockhash(api_key: hug.types.text, index: hug.types.number, hug_timer=20)
 	return request_json("getblockhash", parameters, hug_timer, api_key)
 
 @hug.get(examples='api_key=API_KEY, index=50')
-def showblock(api_key: hug.types.text, index: hug.types.number, hug_timer=20):
+def showblock(api_key: hug.types.text, index: hug.types.number, hug_timer=3):
 	"""showblock <index>"""
 	parameters = {
 	'index': index
@@ -360,7 +384,7 @@ def showblock(api_key: hug.types.text, index: hug.types.number, hug_timer=20):
 	return request_json("showblock", parameters, hug_timer, api_key)
 
 @hug.get(examples='api_key=API_KEY, pollname=whitelist_poll')
-def votedetails(api_key: hug.types.text, pollname: hug.types.text, hug_timer=20):
+def votedetails(api_key: hug.types.text, pollname: hug.types.text, hug_timer=3):
 	"""votedetails <pollname>"""
 	parameters = {
 	'pollname': pollname
@@ -368,7 +392,7 @@ def votedetails(api_key: hug.types.text, pollname: hug.types.text, hug_timer=20)
 	return request_json("votedetails", parameters, hug_timer, api_key)
 
 @hug.get(examples='api_key=API_KEY, cpid=grctxid')
-def beaconstatus(api_key: hug.types.text, cpid: hug.types.text, hug_timer=20):
+def beaconstatus(api_key: hug.types.text, cpid: hug.types.text, hug_timer=3):
 	"""beaconstatus [cpid]"""
 	parameters = {
 	'cpid': cpid
