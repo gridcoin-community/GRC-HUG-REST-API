@@ -158,44 +158,42 @@ def download_extract_stats(project_name, project_url):
 	"""No existing file - let's download and process it!"""
 	print("Downloading {}".format(project_name))
 
-	downloaded_file = requests.get(project_url, stream=True)
-	if downloaded_file.status_code == 200:
-		# Worked
-		if '.gz' in project_url:
-			# Compressed!
+	try:
+		downloaded_file = requests.get(project_url, stream=True)
+		if downloaded_file.status_code == 200:
+			# Worked
+			print("Downloaded ${}".format(project_name))
+
 			with gzip.open(downloaded_file.raw, 'rb') as uncompressed_file:
+				"""Opening GZ & converting XML to dict"""
 				file_content = xmltodict.parse(uncompressed_file.read())
+
+			xml_data = []
+			counter = 0
+			quantity_users = len(file_content['users']['user'])
+			for user in file_content['users']['user']:
+				counter += 1
+				print("{}% complete".format(int((counter/quantity_users)*100)))
+				xml_contents = extract_xml_step(user)
+				if xml_contents == None:
+					# Filter it out
+					continue
+				else:
+					# Success!
+					xml_data.append(xml_contents)
+
+			now = pendulum.now() # Getting the time (SIGIR)
+			current_timestamp = int(round(now.timestamp())) # Converting to timestamp (SIGIR)
+			write_json_to_disk('./STATS_DUMP/' + project_name + '.json', {'json_data': xml_data, 'timestamp': current_timestamp}) # Storing to disk
+
+			#msg_packed_results = msgpack.packb(xml_data, use_bin_type=True)
+			return xml_data
 		else:
-			# Not compressed!
-			file_content = xmltodict.parse(downloaded_file.text) # Not confirmed
-
-		# print("len: {}".format(len(file_content['users']['user'])))
-
-		#pool = Pool(processes=WORKER_COUNT) # 4 workers
-		#pool_xml_data = pool.map(extract_xml_step, file_content['users']['user']) # Deploy the pool workers
-		#pool.terminate()
-		#filter(None, pool_xml_data) # Removing failed elements
-
-		xml_data = []
-		for user in file_content['users']['user']:
-			xml_contents = extract_xml_step(user)
-			if xml_contents == None:
-				# Filter it out
-				continue
-			else:
-				# Success!
-				xml_data.append(xml_contents)
-
-		now = pendulum.now() # Getting the time (SIGIR)
-		current_timestamp = int(round(now.timestamp())) # Converting to timestamp (SIGIR)
-		write_json_to_disk('./STATS_DUMP/' + project_name + '.json', {'json_data': xml_data, 'timestamp': current_timestamp}) # Storing to disk
-
-		#msg_packed_results = msgpack.packb(xml_data, use_bin_type=True)
-		return xml_data
-	else:
-		print("ERROR: {}".format(project_name))
-		# Didn't work
-		return None
+			print("ERROR: {}".format(project_name))
+			# Didn't work
+			return None
+	except requests.exceptions.ConnectionError:
+		print("Error connecting to {}".format(project_name))
 
 #####################
 
