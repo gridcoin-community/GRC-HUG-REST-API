@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x11protobuffer.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"M\n\x04User\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x14\n\x0ctotal_credit\x18\x02 \x01(\x01\x12\x15\n\rexpavg_credit\x18\x03 \x01(\x01\x12\x0c\n\x04\x63pid\x18\x04 \x01(\t\"Q\n\x07Project\x12\x30\n\x0clast_updated\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x14\n\x05users\x18\x02 \x03(\x0b\x32\x05.Userb\x06proto3')
+  serialized_pb=_b('\n\x11protobuffer.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"M\n\x04User\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x14\n\x0ctotal_credit\x18\x02 \x01(\x01\x12\x15\n\rexpavg_credit\x18\x03 \x01(\x01\x12\x0c\n\x04\x63pid\x18\x04 \x01(\t\"N\n\x07Project\x12-\n\ttimestamp\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x14\n\x05users\x18\x02 \x03(\x0b\x32\x05.Userb\x06proto3')
   ,
   dependencies=[google_dot_protobuf_dot_timestamp__pb2.DESCRIPTOR,])
 
@@ -87,7 +87,7 @@ _PROJECT = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='last_updated', full_name='Project.last_updated', index=0,
+      name='timestamp', full_name='Project.timestamp', index=0,
       number=1, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
@@ -113,10 +113,10 @@ _PROJECT = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=133,
-  serialized_end=214,
+  serialized_end=211,
 )
 
-_PROJECT.fields_by_name['last_updated'].message_type = google_dot_protobuf_dot_timestamp__pb2._TIMESTAMP
+_PROJECT.fields_by_name['timestamp'].message_type = google_dot_protobuf_dot_timestamp__pb2._TIMESTAMP
 _PROJECT.fields_by_name['users'].message_type = _USER
 DESCRIPTOR.message_types_by_name['User'] = _USER
 DESCRIPTOR.message_types_by_name['Project'] = _PROJECT

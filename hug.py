@@ -4,6 +4,7 @@ import hug
 import json
 #import msgpack
 import umsgpack
+import numpy as np
 from pathlib import Path
 import pendulum
 import requests
@@ -117,20 +118,24 @@ def write_json_to_disk(filename, json_data):
 	"""
 	with open(filename, 'w') as outfile:
 		json.dump(json_data, outfile)
+		outfile.close()
 
 def write_msgpack_bin_to_disk(filename, json_data):
 	"""
 	Store msgpack data as bin on disk
 	"""
 	with open(filename, 'wb') as f:
-		umsgpack.pack(json_data, f)
+		#umsgpack.pack(json_data, f)
+		umsgpack.dump(json_data, f)
+		f.close()
 
 def read_msgpack_bin_from_disk(filename):
 	"""
 	Extract stored msgpack data from disk
 	"""
-	with open(filename, 'wb') as f:
-		return umsgpack.unpack(f)
+	with open(filename, 'rb') as f:
+		#return umsgpack.unpack(f)
+		return umsgpack.load(f)
 
 def extract_xml_step(xml_row):
 	"""
@@ -150,6 +155,27 @@ def extract_xml_step(xml_row):
 		# filtered out
 		return None
 
+def open_protobuffer_from_file(filename):
+	"""Read the existing project file"""
+	try:
+		with open(filename, "rb") as file:
+			project = protobuffer_pb2.Project() # Defines the protobuffer!
+			project.ParseFromString(file.read())
+			return project
+	except IOError:
+		print(filename + ": File not found.  Creating a new file.")
+		return None
+
+def write_protobuffer_to_disk(filename, target):
+	"""Write the project file to disk"""
+	with open(filename, "wb") as file:
+		file.write(target.SerializeToString())
+
+def ListUsers(Project):
+    """Print the users"""
+    for user in Project.users:
+        print(str(user.id) + " " + str(user.total_credit) + " " + str(user.expavg_credit) + " " + str(user.cpid))
+
 def download_extract_stats(project_name, project_url):
 	"""
 	Download an xml.gz, extract gz, parse xml, reduce & return data.
@@ -160,12 +186,13 @@ def download_extract_stats(project_name, project_url):
 		print("File existed!")
 		"""File exists - check its contents"""
 		existing_json = return_json_file_contents("./STATS_DUMP/"+project_name+".json")
-		existing_bin = read_msgpack_bin_from_disk("./STATS_DUMP/"+project_name+".bin")
+		existing_bin = read_msgpack_bin_from_disk("./STATS_DUMP/"+project_name+".msgpked_bin")
+		existing_protobuffer = open_protobuffer_from_file("./STATS_DUMP/"+project_name+".proto_bin")
 
-		#existing_protobuffer = open_protobuffer_from_file("./STATS_DUMP/"+project_name+".proto_bin",REPLACE_TARGET)
+		ListUsers(existing_protobuffer)
 
-		now = pendulum.now() # Getting the time (SIGIR)
-		current_timestamp = int(round(now.timestamp())) # Converting to timestamp (SIGIR)
+		now = pendulum.now() # Getting the time
+		current_timestamp = int(round(now.timestamp())) # Converting to timestamp
 
 		if (current_timestamp - int(existing_json['timestamp']) < MAX_STATS_LIFETIME):
 			"""Data is still valid - let's return it instead of fetching it!"""
@@ -196,7 +223,7 @@ def download_extract_stats(project_name, project_url):
 			#counter = 0
 			#quantity_users = len(file_content['users']['user'])
 
-			project = protobuffer_pb2.AddressBook() # Defines the protobuffer!
+			project = protobuffer_pb2.Project() # Defines the protobuffer!
 
 			print("Converted. Now Processing: {}".format(project_name))
 			for user in file_content['users']['user']:
@@ -209,18 +236,18 @@ def download_extract_stats(project_name, project_url):
 				else:
 					# Success!
 					xml_data.append(xml_contents)
+					# Protobuffer
+					proto_user = project.users.add()
+					proto_user.id = np.int64(xml_contents['id'])
+					proto_user.total_credit = float(xml_contents['total_credit'])
+					proto_user.expavg_credit = float(xml_contents['expavg_credit'])
+					proto_user.cpid = xml_contents['cpid']
 
-				# Protobuffer
-				proto_user = project.user.add()
-				proto_user.id = xml_data.id
-				proto_user.total_credit = xml_data.total_credit
-				proto_user.expavg_credit = xml_data.expavg_credit
-				proto_user.cpid = xml_data.cpid
-
-			now = pendulum.now() # Getting the time (SIGIR)
-			current_timestamp = int(round(now.timestamp())) # Converting to timestamp (SIGIR)
+			now = pendulum.now() # Getting the time
+			current_timestamp = int(round(now.timestamp())) # Converting to timestamp
 			write_json_to_disk('./STATS_DUMP/' + project_name + '.json', {'json_data': xml_data, 'timestamp': current_timestamp}) # Storing to disk
-			write_msgpack_bin_to_disk('./STATS_DUMP/' + project_name + '.bin', {'json_data': xml_data, 'timestamp': current_timestamp}) # Storing to disk
+			write_msgpack_bin_to_disk('./STATS_DUMP/' + project_name + '.msgpked_bin', {'json_data': xml_data, 'timestamp': current_timestamp}) # Storing to disk
+
 			write_protobuffer_to_disk('./STATS_DUMP/' + project_name + '.proto_bin', project)
 			#msg_packed_results = msgpack.packb(xml_data, use_bin_type=True)
 			return xml_data
@@ -230,31 +257,6 @@ def download_extract_stats(project_name, project_url):
 			return None
 	except requests.exceptions.ConnectionError:
 		print("Error connecting to {}".format(project_name))
-
-#####################
-
-"""PROTOBUFFERS"""
-
-def open_protobuffer_from_file(filename, target):
-	"""Read the existing project file"""
-	try:
-		with open(filename, "rb") as file:
-			return target.ParseFromString(file.read())
-	except IOError:
-		print(filename + ": File not found.  Creating a new file.")
-		return None
-
-def write_protobuffer_to_disk(filename, target):
-	"""Write the project file to disk"""
-
-	now = pendulum.now() # Getting the time (SIGIR)
-	current_timestamp = int(round(now.timestamp())) # Converting to timestamp (SIGIR)
-
-	with open(filename, "wb") as file:
-		target.last_updated = current_timestamp # We want a timstamp to check
-		file.write(target.SerializeToString())
-
-#####################
 
 def initialize_project_data():
 	"""Initialise BOINC project statistics into memory."""
@@ -271,7 +273,8 @@ def initialize_project_data():
 	"""
 	processed_project_data = []
 
-	for project in init_project[:2]: # TODO: REMOVE ':2'
+	for project in init_project:
+		"""Iterating over all projects in config file"""
 		temp_project_holder = project # Can we just reference project?
 		print("Checking {}".format(project['project_name']))
 		json_data = download_extract_stats(project['project_name'], project['user_gz_url'])

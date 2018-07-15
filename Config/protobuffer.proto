@@ -20,7 +20,7 @@ message User {
 
 // The following is how we store the user to disk
 message Project {
-  google.protobuf.Timestamp last_updated = 1;
+  google.protobuf.Timestamp timestamp = 1;
   repeated User users = 2;
 }
 // [END messages]
