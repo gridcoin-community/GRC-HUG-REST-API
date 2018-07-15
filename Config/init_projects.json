@@ -1,0 +1,82 @@
+[
+    {
+      "project_name": "SETI@Home",
+      "user_gz_url": "http://setiweb.ssl.berkeley.edu/stats/user.gz"
+    },
+    {
+      "project_name": "Rosetta@Home",
+      "user_gz_url": "http://boinc.bakerlab.org/rosetta/stats/user.gz"
+    },
+    {
+      "project_name": "BURP",
+      "user_gz_url": "http://burp.boinc.dk/stats/user_id.gz"
+    },
+    {
+      "project_name": "CSGrid",
+      "user_gz_url": "http://csgrid.org/csg/stats/user.gz"
+    },
+    {
+      "project_name": "Collatz",
+      "user_gz_url": "http://boinc.thesonntags.com/collatz/stats/user.gz"
+    },
+    {
+      "project_name": "Milkyway@Home",
+      "user_gz_url": "http://milkyway.cs.rpi.edu/milkyway/stats/user.gz"
+    },
+    {
+      "project_name": "Asteroids@Home",
+      "user_gz_url": "http://asteroidsathome.net/boinc/stats/user.gz"
+    },
+    {
+      "project_name": "GPUGRID",
+      "user_gz_url": "https://www.gpugrid.net/stats/user.gz"
+    },
+    {
+      "project_name": "Moowrap",
+      "user_gz_url": "http://moowrap.net/stats/user.gz"
+    },
+    {
+      "project_name": "Leiden Classical",
+      "user_gz_url": "http://boinc.gorlaeus.net/stats/user.xml.gz"
+    },
+    {
+      "project_name": "CPDN",
+      "user_gz_url": "http://bbc.cpdn.org/stats/user.xml.gz"
+    },
+    {
+      "project_name": "PrimeGrid",
+      "user_gz_url": "http://www.primegrid.com/stats/user_id.gz"
+    },
+    {
+      "project_name": "NumberFields",
+      "user_gz_url": "http://numberfields.asu.edu/NumberFields/stats/user.gz"
+    },
+    {
+      "project_name": "NFS",
+      "user_gz_url": "https://escatter11.fullerton.edu/nfs/stats/user.gz"
+    },
+    {
+      "project_name": "MindModeling",
+      "user_gz_url": "https://mindmodeling.org/stats/user.gz"
+    },
+    {
+      "project_name": "Cosmology@Home",
+      "user_gz_url": "http://www.cosmologyathome.org/stats/user.gz"
+    },
+    {
+      "project_name": "Find@Home",
+      "user_gz_url": "http://findah.ucd.ie/stats/user.gz"
+    },
+    {
+      "project_name": "YAFU",
+      "user_gz_url": "http://yafu.myfirewall.org/yafu/stats/user.gz"
+    },
+    {
+      "project_name": "YOYO@Home",
+      "user_gz_url": "http://www.rechenkraft.net/yoyo/stats/user.gz"
+    },
+    {
+      "project_name": "SAT@Home",
+      "user_gz_url": "http://sat.isa.ru/pdsat/stats/user.gz"
+    }
+]

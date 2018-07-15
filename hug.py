@@ -2,13 +2,16 @@ from bs4 import BeautifulSoup
 import gzip
 import hug
 import json
-import msgpack
+#import msgpack
+import umsgpack
 from pathlib import Path
 import pendulum
 import requests
 import sys
 import time
 import xmltodict
+
+from Config.PROTOC_OUTPUT import protobuffer_pb2
 
 # Configured in the gridcoinresearch.conf file:
 rpcuser="rpcusernametesting1337"
@@ -115,6 +118,20 @@ def write_json_to_disk(filename, json_data):
 	with open(filename, 'w') as outfile:
 		json.dump(json_data, outfile)
 
+def write_msgpack_bin_to_disk(filename, json_data):
+	"""
+	Store msgpack data as bin on disk
+	"""
+	with open(filename, 'wb') as f:
+		umsgpack.pack(json_data, f)
+
+def read_msgpack_bin_from_disk(filename):
+	"""
+	Extract stored msgpack data from disk
+	"""
+	with open(filename, 'wb') as f:
+		return umsgpack.unpack(f)
+
 def extract_xml_step(xml_row):
 	"""
 	Multiprocessing the extraction of key info from selected xml items!
@@ -142,7 +159,10 @@ def download_extract_stats(project_name, project_url):
 	if existing_file_check.is_file():
 		print("File existed!")
 		"""File exists - check its contents"""
-		existing_json = return_json_file_contents(file_path)
+		existing_json = return_json_file_contents("./STATS_DUMP/"+project_name+".json")
+		existing_bin = read_msgpack_bin_from_disk("./STATS_DUMP/"+project_name+".bin")
+
+		#existing_protobuffer = open_protobuffer_from_file("./STATS_DUMP/"+project_name+".proto_bin",REPLACE_TARGET)
 
 		now = pendulum.now() # Getting the time (SIGIR)
 		current_timestamp = int(round(now.timestamp())) # Converting to timestamp (SIGIR)
@@ -162,18 +182,26 @@ def download_extract_stats(project_name, project_url):
 		downloaded_file = requests.get(project_url, stream=True)
 		if downloaded_file.status_code == 200:
 			# Worked
-			print("Downloaded ${}".format(project_name))
-
 			with gzip.open(downloaded_file.raw, 'rb') as uncompressed_file:
 				"""Opening GZ & converting XML to dict"""
-				file_content = xmltodict.parse(uncompressed_file.read())
+				print("Downloaded {}".format(project_name))
+				if project_name == "YOYO@Home":
+					with gzip.open(uncompressed_file, 'rb') as extra_uncompressed_file:
+						"""Opening nested GZ & converting XML to dict. TODO: Attempt this on failure to xmltodict parse?"""
+						file_content = xmltodict.parse(extra_uncompressed_file.read())
+				else:
+					file_content = xmltodict.parse(uncompressed_file.read())
 
 			xml_data = []
-			counter = 0
-			quantity_users = len(file_content['users']['user'])
+			#counter = 0
+			#quantity_users = len(file_content['users']['user'])
+
+			project = protobuffer_pb2.AddressBook() # Defines the protobuffer!
+
+			print("Converted. Now Processing: {}".format(project_name))
 			for user in file_content['users']['user']:
-				counter += 1
-				print("{}% complete".format(int((counter/quantity_users)*100)))
+				#counter += 1
+				#print("{}% complete".format(int((counter/quantity_users)*100)))
 				xml_contents = extract_xml_step(user)
 				if xml_contents == None:
 					# Filter it out
@@ -182,10 +210,18 @@ def download_extract_stats(project_name, project_url):
 					# Success!
 					xml_data.append(xml_contents)
 
+				# Protobuffer
+				proto_user = project.user.add()
+				proto_user.id = xml_data.id
+				proto_user.total_credit = xml_data.total_credit
+				proto_user.expavg_credit = xml_data.expavg_credit
+				proto_user.cpid = xml_data.cpid
+
 			now = pendulum.now() # Getting the time (SIGIR)
 			current_timestamp = int(round(now.timestamp())) # Converting to timestamp (SIGIR)
 			write_json_to_disk('./STATS_DUMP/' + project_name + '.json', {'json_data': xml_data, 'timestamp': current_timestamp}) # Storing to disk
-
+			write_msgpack_bin_to_disk('./STATS_DUMP/' + project_name + '.bin', {'json_data': xml_data, 'timestamp': current_timestamp}) # Storing to disk
+			write_protobuffer_to_disk('./STATS_DUMP/' + project_name + '.proto_bin', project)
 			#msg_packed_results = msgpack.packb(xml_data, use_bin_type=True)
 			return xml_data
 		else:
@@ -197,9 +233,32 @@ def download_extract_stats(project_name, project_url):
 
 #####################
 
+"""PROTOBUFFERS"""
+
+def open_protobuffer_from_file(filename, target):
+	"""Read the existing project file"""
+	try:
+		with open(filename, "rb") as file:
+			return target.ParseFromString(file.read())
+	except IOError:
+		print(filename + ": File not found.  Creating a new file.")
+		return None
+
+def write_protobuffer_to_disk(filename, target):
+	"""Write the project file to disk"""
+
+	now = pendulum.now() # Getting the time (SIGIR)
+	current_timestamp = int(round(now.timestamp())) # Converting to timestamp (SIGIR)
+
+	with open(filename, "wb") as file:
+		target.last_updated = current_timestamp # We want a timstamp to check
+		file.write(target.SerializeToString())
+
+#####################
+
 def initialize_project_data():
 	"""Initialise BOINC project statistics into memory."""
-	initial_project_json = return_json_file_contents('init_projects.json')
+	init_project = return_json_file_contents('./Config/init_projects.json')
 
 	"""
 	[
@@ -212,7 +271,7 @@ def initialize_project_data():
 	"""
 	processed_project_data = []
 
-	for project in initial_project_json: # TODO: REMOVE ':3'
+	for project in init_project[:2]: # TODO: REMOVE ':2'
 		temp_project_holder = project # Can we just reference project?
 		print("Checking {}".format(project['project_name']))
 		json_data = download_extract_stats(project['project_name'], project['user_gz_url'])
@@ -243,8 +302,9 @@ def user_stats(api_key: hug.types.text, format: hug.types.text, hug_timer=3):
 	elif format == "MSGPACK":
 		msgpacked_data = []
 		for project in fully_processed_project_data:
-			msgpack_contents = msgpack.packb(project['json_data'], use_bin_type=True)
-			msgpacked_data.append({'project': project['project_name'], 'msgpacked_data': str(msgpack_contents)})
+			msgpacked_contents = umsgpack.packb(project['json_data'])
+			#msgpacked_contents = msgpack.packb(project['json_data'], use_bin_type=True)
+			msgpacked_data.append({'project': project['project_name'], 'msgpacked_data': str(msgpacked_contents)})
 
 		return {'project_msgpack': msgpacked_data, 'success': True, 'api_key': True, 'took': float(hug_timer)}
 
