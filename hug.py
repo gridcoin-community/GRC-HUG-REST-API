@@ -151,7 +151,7 @@ def extract_xml_step(xml_row):
 			# Filtered out
 			return None
 	else:
-		print("attr doesn't exist")
+		print("WARNING: XML Attr doesn't exist!!!")
 		# filtered out
 		return None
 
@@ -181,15 +181,19 @@ def download_extract_stats(project_name, project_url):
 	Download an xml.gz, extract gz, parse xml, reduce & return data.
 	"""
 	file_path = "./STATS_DUMP/"+project_name+".json"
+	need_to_download = True
 	existing_file_check = Path(file_path)
 	if existing_file_check.is_file():
 		print("File existed!")
-		"""File exists - check its contents"""
+		"""
+			File exists - check its contents
+			TODO: Read msgpack | protobuffer instead of JSON?
+		"""
 		existing_json = return_json_file_contents("./STATS_DUMP/"+project_name+".json")
-		existing_bin = read_msgpack_bin_from_disk("./STATS_DUMP/"+project_name+".msgpked_bin")
-		existing_protobuffer = open_protobuffer_from_file("./STATS_DUMP/"+project_name+".proto_bin")
+		#existing_bin = read_msgpack_bin_from_disk("./STATS_DUMP/"+project_name+".msgpked_bin")
+		#existing_protobuffer = open_protobuffer_from_file("./STATS_DUMP/"+project_name+".proto_bin")
 
-		ListUsers(existing_protobuffer)
+		#ListUsers(existing_protobuffer)
 
 		now = pendulum.now() # Getting the time
 		current_timestamp = int(round(now.timestamp())) # Converting to timestamp
@@ -197,66 +201,59 @@ def download_extract_stats(project_name, project_url):
 		if (current_timestamp - int(existing_json['timestamp']) < MAX_STATS_LIFETIME):
 			"""Data is still valid - let's return it instead of fetching it!"""
 			print("Within lifetime")
-			return existing_json['json_data']
+			need_to_download = False
 		else:
 			"""No existing file"""
 			print("{} stats too old - downloading fresh copy!".format(project_name))
 
-	"""No existing file - let's download and process it!"""
-	print("Downloading {}".format(project_name))
+	if (need_to_download == True):
+		"""No existing file - let's download and process it!"""
+		try:
+			downloaded_file = requests.get(project_url, stream=True)
+			print("Downloading {}".format(project_name))
+			if downloaded_file.status_code == 200:
+				# Worked
+				with gzip.open(downloaded_file.raw, 'rb') as uncompressed_file:
+					"""Opening GZ & converting XML to dict"""
+					print("Downloaded {}".format(project_name))
+					if project_name == "YOYO@Home":
+						with gzip.open(uncompressed_file, 'rb') as extra_uncompressed_file:
+							"""Opening nested GZ & converting XML to dict. TODO: Attempt this on failure to xmltodict parse?"""
+							file_content = xmltodict.parse(extra_uncompressed_file.read())
+					else:
+						file_content = xmltodict.parse(uncompressed_file.read())
 
-	try:
-		downloaded_file = requests.get(project_url, stream=True)
-		if downloaded_file.status_code == 200:
-			# Worked
-			with gzip.open(downloaded_file.raw, 'rb') as uncompressed_file:
-				"""Opening GZ & converting XML to dict"""
-				print("Downloaded {}".format(project_name))
-				if project_name == "YOYO@Home":
-					with gzip.open(uncompressed_file, 'rb') as extra_uncompressed_file:
-						"""Opening nested GZ & converting XML to dict. TODO: Attempt this on failure to xmltodict parse?"""
-						file_content = xmltodict.parse(extra_uncompressed_file.read())
-				else:
-					file_content = xmltodict.parse(uncompressed_file.read())
+				print("Converted. Now Processing: {}".format(project_name))
 
-			xml_data = []
-			#counter = 0
-			#quantity_users = len(file_content['users']['user'])
+				xml_data = []
+				project = protobuffer_pb2.Project() # Defines the protobuffer!
+				for user in file_content['users']['user']:
+					user_xml_contents = extract_xml_step(user)
+					if user_xml_contents == None:
+						# Filter it out
+						continue
+					else:
+						# Success!
+						xml_data.append(user_xml_contents)
+						# Protobuffer
+						proto_user = project.users.add()
+						proto_user.id = np.int64(user_xml_contents['id'])
+						proto_user.total_credit = float(user_xml_contents['total_credit'])
+						proto_user.expavg_credit = float(user_xml_contents['expavg_credit'])
+						proto_user.cpid = user_xml_contents['cpid']
 
-			project = protobuffer_pb2.Project() # Defines the protobuffer!
-
-			print("Converted. Now Processing: {}".format(project_name))
-			for user in file_content['users']['user']:
-				#counter += 1
-				#print("{}% complete".format(int((counter/quantity_users)*100)))
-				xml_contents = extract_xml_step(user)
-				if xml_contents == None:
-					# Filter it out
-					continue
-				else:
-					# Success!
-					xml_data.append(xml_contents)
-					# Protobuffer
-					proto_user = project.users.add()
-					proto_user.id = np.int64(xml_contents['id'])
-					proto_user.total_credit = float(xml_contents['total_credit'])
-					proto_user.expavg_credit = float(xml_contents['expavg_credit'])
-					proto_user.cpid = xml_contents['cpid']
-
-			now = pendulum.now() # Getting the time
-			current_timestamp = int(round(now.timestamp())) # Converting to timestamp
-			write_json_to_disk('./STATS_DUMP/' + project_name + '.json', {'json_data': xml_data, 'timestamp': current_timestamp}) # Storing to disk
-			write_msgpack_bin_to_disk('./STATS_DUMP/' + project_name + '.msgpked_bin', {'json_data': xml_data, 'timestamp': current_timestamp}) # Storing to disk
-
-			write_protobuffer_to_disk('./STATS_DUMP/' + project_name + '.proto_bin', project)
-			#msg_packed_results = msgpack.packb(xml_data, use_bin_type=True)
-			return xml_data
-		else:
-			print("ERROR: {}".format(project_name))
-			# Didn't work
-			return None
-	except requests.exceptions.ConnectionError:
-		print("Error connecting to {}".format(project_name))
+				now = pendulum.now() # Getting the time
+				current_timestamp = int(round(now.timestamp())) # Converting to timestamp
+				write_json_to_disk('./STATS_DUMP/' + project_name + '.json', {'json_data': xml_data, 'timestamp': current_timestamp}) # Storing to disk
+				write_msgpack_bin_to_disk('./STATS_DUMP/' + project_name + '.msgpked_bin', {'json_data': xml_data, 'timestamp': current_timestamp}) # Storing to disk
+				write_protobuffer_to_disk('./STATS_DUMP/' + project_name + '.proto_bin', project)
+			else:
+				print("ERROR: {}".format(project_name))
+				# TODO: Skip this project when attempting to read from disk!
+		except requests.exceptions.ConnectionError:
+			print("Error connecting to {}".format(project_name))
+	else:
+		"""Existing file detected. skip!"""
 
 def initialize_project_data():
 	"""Initialise BOINC project statistics into memory."""
@@ -271,24 +268,41 @@ def initialize_project_data():
 		...
 	]
 	"""
-	processed_project_data = []
-
+	all_projects_json_list = []
+	all_projects_msgpack_list = []
+	all_projects_protobuffer_list = []
+	all_projects_time_taken_list = []
 	for project in init_project:
 		"""Iterating over all projects in config file"""
-		temp_project_holder = project # Can we just reference project?
 		print("Checking {}".format(project['project_name']))
-		json_data = download_extract_stats(project['project_name'], project['user_gz_url'])
-		if (json_data != None):
-			temp_project_holder['json_data'] = json_data
-		else:
-			print("Failed to download: {}".format(project['project_name']))
-			continue
 
-		processed_project_data.append(temp_project_holder)
+		before_download = pendulum.now()
+		#before_download = int(round(before_download.timestamp())) # Converting to timestamp
 
-	return processed_project_data
+		download_extract_stats(project['project_name'], project['user_gz_url'])
+		print("Reading files from disk.")
 
-fully_processed_project_data = initialize_project_data()
+		before_json_read = pendulum.now() # Getting the time
+		all_projects_json_list.append({'project_name': project['project_name'], 'json': return_json_file_contents("./STATS_DUMP/"+project['project_name']+".json")})
+		before_msgpack_read = pendulum.now() # Getting the time
+		all_projects_msgpack_list.append({'project_name': project['project_name'], 'msgpack': read_msgpack_bin_from_disk("./STATS_DUMP/"+project['project_name']+".msgpked_bin")})
+		before_protobuffer_read = pendulum.now() # Getting the time
+		all_projects_protobuffer_list.append({'project_name': project['project_name'], 'protobuffer': open_protobuffer_from_file("./STATS_DUMP/"+project['project_name']+".proto_bin")})
+		complete_project_read = pendulum.now() # Getting the time
+		all_projects_time_taken_list.append({'project_name': project['project_name'], 'time_to_download': before_download.diff(before_json_read).in_words(), 'time_to_read_json': before_json_read.diff(before_protobuffer_read).in_words(), 'time_to_read_msgpack': before_msgpack_read.diff(before_protobuffer_read).in_words(), 'time_to_read_protobuffer': before_protobuffer_read.diff(complete_project_read).in_words()})
+		print("---")
+
+	# We're ready to store the retrieved project contents into memory
+	return all_projects_json_list, all_projects_msgpack_list, all_projects_protobuffer_list, all_projects_time_taken_list
+
+#####################
+"""
+# Initializing the BOINC data!
+Returns json, msgpack and protobuffer project contents in lists.
+"""
+project_json_list, project_msgpack_list, project_porotobuffer_list, project_time_taken_list = initialize_project_data()
+
+print(project_time_taken_list)
 
 #####################
 
@@ -301,8 +315,10 @@ def user_stats(api_key: hug.types.text, format: hug.types.text, hug_timer=3):
 		return {'success': False, 'api_key': False, 'took': float(hug_timer), 'hug_error_message': 'Invalid API key input.'}
 
 	if format == "JSON":
-		return {'project_json': fully_processed_project_data, 'success': True, 'api_key': True, 'took': float(hug_timer)}
+		return {'project_json_list': project_json_list, 'success': True, 'api_key': True, 'took': float(hug_timer)}
 	elif format == "MSGPACK":
+		return {'project_msgpack_list': project_msgpack_list, 'success': True, 'api_key': True, 'took': float(hug_timer)}
+		"""
 		msgpacked_data = []
 		for project in fully_processed_project_data:
 			msgpacked_contents = umsgpack.packb(project['json_data'])
@@ -310,7 +326,7 @@ def user_stats(api_key: hug.types.text, format: hug.types.text, hug_timer=3):
 			msgpacked_data.append({'project': project['project_name'], 'msgpacked_data': str(msgpacked_contents)})
 
 		return {'project_msgpack': msgpacked_data, 'success': True, 'api_key': True, 'took': float(hug_timer)}
-
+		"""
 #####################
 
 @hug.get(examples='api_key=API_KEY, function=FUNCTION_NAME')

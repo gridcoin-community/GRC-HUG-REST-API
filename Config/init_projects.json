@@ -40,12 +40,8 @@
       "user_gz_url": "http://boinc.gorlaeus.net/stats/user.xml.gz"
     },
     {
-      "project_name": "CPDN",
-      "user_gz_url": "http://bbc.cpdn.org/stats/user.xml.gz"
-    },
-    {
       "project_name": "PrimeGrid",
-      "user_gz_url": "http://www.primegrid.com/stats/user_id.gz"
+      "user_gz_url": "https://www.primegrid.com/stats/user.gz"
     },
     {
       "project_name": "NumberFields",
