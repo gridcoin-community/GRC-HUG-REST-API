@@ -56,5 +56,3 @@ docs/_build/
 
 # PyBuilder
 target/
-
-STATS_DUMP/
