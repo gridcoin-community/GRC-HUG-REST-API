@@ -60,7 +60,21 @@ We create the 'grcapi' user, however you could rename this to whatever you want,
     pip3 install requests
     pip3 install hug
     pip3 install gunicorn
-    pip3 install json
+    pip3 install BeautifulSoup4
+    pip3 install numpy
+    pip3 install umsgpack
+    pip3 install gzip
+    pip3 install pendulum
+    pip3 install xmltodict
+
+#### Install protobuf3
+
+    curl -OL https://github.com/google/protobuf/releases/download/v3.6.0/protoc-3.6.0-linux-x86_64.zip
+    unzip protoc-3.6.0-linux-x86_64.zip -d protoc3
+    sudo mv protoc3/bin/* /usr/local/bin/
+    sudo mv protoc3/include/* /usr/local/include/
+    sudo chown grcapi /usr/local/bin/protoc
+    sudo chown -R grcapi /usr/local/include/google
 
 ### Configure NGINX
 
