@@ -15,7 +15,7 @@ message User {
   int64 id = 1;
   double total_credit = 2;
   double expavg_credit = 3;
-  string cpid = 4;
+  bytes cpid = 4;
 }
 
 // The following is how we store the user to disk

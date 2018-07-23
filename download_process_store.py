@@ -14,12 +14,9 @@ from Config.PROTOC_OUTPUT import protobuffer_pb2
 def write_json_to_disk(filename, json_data):
 	"""
 	When called, write the json_data to a json file.
-	We will end up with many data_*.json files.
-	These files will be merged using jq.
 	"""
 	with open(filename, 'w') as outfile:
 		json.dump(json_data, outfile)
-		outfile.close()
 
 def write_msgpack_bin_to_disk(filename, json_data):
 	"""
@@ -27,7 +24,6 @@ def write_msgpack_bin_to_disk(filename, json_data):
 	"""
 	with open(filename, 'wb') as f:
 		umsgpack.dump(json_data, f)
-		f.close()
 
 def return_json_file_contents(filename):
 	"""
@@ -149,6 +145,7 @@ def download_extract_stats(project_name, project_url):
 						# Filter it out
 						continue
 					else:
+						user_xml_contents['cpid'] = user_xml_contents['cpid'].decode('hex')
 						# Success!
 						xml_data.append(user_xml_contents)
 						# Protobuffer
@@ -192,5 +189,5 @@ def initialize_project_data():
 		all_projects_time_taken_list.append({'project_name': project['project_name'], 'time_to_write_json': before_json_write.diff(before_msgpack_write).in_words(), 'time_to_write_msgpack': before_msgpack_write.diff(before_protobuf_write).in_words(), 'time_to_write_protobuf': before_protobuf_write.diff(after_protobuf_write).in_words()})
 
 	print(all_projects_time_taken_list)
-	
+
 initialize_project_data()
