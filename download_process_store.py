@@ -8,6 +8,7 @@ import requests
 import sys
 import time
 import xmltodict
+import base64
 
 from Config.PROTOC_OUTPUT import protobuffer_pb2
 
@@ -105,8 +106,6 @@ def download_extract_stats(project_name, project_url):
 		#existing_bin = read_msgpack_bin_from_disk("./STATS_DUMP/"+project_name+".msgpked_bin")
 		#existing_protobuffer = open_protobuffer_from_file("./STATS_DUMP/"+project_name+".proto_bin")
 
-		#ListUsers(existing_protobuffer)
-
 		now = pendulum.now() # Getting the time
 		current_timestamp = int(round(now.timestamp())) # Converting to timestamp
 
@@ -145,7 +144,8 @@ def download_extract_stats(project_name, project_url):
 						# Filter it out
 						continue
 					else:
-						user_xml_contents['cpid'] = user_xml_contents['cpid'].decode('hex')
+						#user_xml_contents['cpid'] = str(bytes.fromhex(user_xml_contents['cpid']))
+						user_xml_contents['cpid'] = str(base64.b64encode(bytes.fromhex(user_xml_contents['cpid'])))
 						# Success!
 						xml_data.append(user_xml_contents)
 						# Protobuffer
@@ -186,6 +186,7 @@ def initialize_project_data():
 		"""Iterating over all projects in config file"""
 		print("Checking : {}".format(project['project_name']))
 		before_json_write, before_msgpack_write, before_protobuf_write, after_protobuf_write = download_extract_stats(project['project_name'], project['user_gz_url'])
+		print("DUCK!")
 		all_projects_time_taken_list.append({'project_name': project['project_name'], 'time_to_write_json': before_json_write.diff(before_msgpack_write).in_words(), 'time_to_write_msgpack': before_msgpack_write.diff(before_protobuf_write).in_words(), 'time_to_write_protobuf': before_protobuf_write.diff(after_protobuf_write).in_words()})
 
 	print(all_projects_time_taken_list)

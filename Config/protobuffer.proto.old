@@ -1,0 +1,26 @@
+// Note: START and END tags are used in comments to define sections used in
+// tutorials.  They are not part of the syntax for Protocol Buffers.
+//
+// To get an in-depth walkthrough of this file and the related examples, see:
+// https://developers.google.com/protocol-buffers/docs/tutorials
+
+// [START declaration]
+syntax = "proto3";
+//package project; //TODO Change?
+import "google/protobuf/timestamp.proto";
+// [END declaration]
+
+// [START messages]
+message User {
+  int64 id = 1;
+  double total_credit = 2;
+  double expavg_credit = 3;
+  bytes cpid = 4;
+}
+
+// The following is how we store the user to disk
+message Project {
+  google.protobuf.Timestamp timestamp = 1;
+  repeated User users = 2;
+}
+// [END messages]
