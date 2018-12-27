@@ -78,8 +78,17 @@ def request_json(input_method, input_parameters, timer, api_key):
 					# Hiding each connected peer's IP & Port
 					for peer in result:
 						peer['addr'] = "ip.ip.ip.ip"
-
-				return {'success': True, 'api_key': True, 'result': result, 'time_taken': timer, 'hug_error_message': ''}
+				if (input_method == "beaconreport"):
+					# process the beacon report results
+					processed_results = []
+					for key,value in result[0].items():
+						if key == "CPID":
+							continue
+						else:
+							processed_results.append({'cpid':key, 'address':value})
+					return {'success': True, 'api_key': True, 'result': processed_results, 'time_taken': timer, 'hug_error_message': ''}
+				else:
+					return {'success': True, 'api_key': True, 'result': result, 'time_taken': timer, 'hug_error_message': ''}
 			else:
 				return {'success': True, 'api_key': True, 'result': result, 'time_taken': timer, 'hug_error_message': ''}
 	except requests.exceptions.ConnectionError:
@@ -134,6 +143,31 @@ def grc_command(api_key: hug.types.text, function: hug.types.text, hug_timer=3):
 	else:
 		# User requested an invalid function
 		return {'success': False, 'api_key': True, 'took': float(hug_timer), 'hug_error_message': 'Invalid GRC command requested by user. Use: {}'.format(', '.join(valid_functions))}
+
+###########################
+
+@hug.get(examples='api_key=API_KEY')
+def peer_version_summary(api_key: hug.types.text, hug_timer=3):
+	"""Summarise which version users are running. Helpful for monitoring mandatory upgrade progress."""
+	peer_info = request_json('getpeerinfo', None, hug_timer, api_key)
+	if (peer_info['success'] == True):
+		peer_info_result = peer_info['result']
+		subver_count = {}
+		count = 0
+		nn_participants = 0
+		for peer in peer_info_result:
+			count += 1
+			if (peer['Neural Network'] == True):
+				nn_participants += 1
+
+			if peer['subver'] in subver_count:
+				subver_count[peer['subver']] = subver_count[peer['subver']] + 1
+			else:
+				subver_count[peer['subver']] = 1
+		return {'success': True, 'api_key': True, 'result': subver_count, 'count': count, 'nn_participants': nn_participants}
+	else:
+		# Fail
+		return {'success': False, 'api_key': True}
 
 """
 NOTE: Below this point the HUG functions require user input!
