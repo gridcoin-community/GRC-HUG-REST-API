@@ -10,6 +10,13 @@ import time
 import xmltodict
 import base64
 
+# For captn proto
+from __future__ import print_function
+import os
+import capnp
+import boinc_schema_capnp # Import our captn proto schema
+
+# Protobuffer
 from Config.PROTOC_OUTPUT import protobuffer_pb2
 
 def write_json_to_disk(filename, json_data):
@@ -84,12 +91,19 @@ def write_protobuffer_to_disk(filename, target):
 	with open(filename, "wb") as file:
 		file.write(target.SerializeToString())
 
+def write_captnproto_to_disk(filename, target):
+	"""Write the project file to disk"""
+	#with open(filename, "wb") as file:
+	#	file.write(target.SerializeToString())
+    with open(filename, 'w') as file:
+    	target.write(file)
+
 def ListUsers(Project):
     """Print the users"""
     for user in Project.users:
         print(str(user.id) + " " + str(user.total_credit) + " " + str(user.expavg_credit) + " " + str(user.cpid))
 
-def download_extract_stats(project_name, project_url):
+def download_extract_stats(project_name, project_url, quantity_projects):
 	"""
 	Download an xml.gz, extract gz, parse xml, reduce & return data.
 	"""
@@ -138,6 +152,11 @@ def download_extract_stats(project_name, project_url):
 
 				xml_data = []
 				project = protobuffer_pb2.Project() # Defines the protobuffer!
+
+			    Users = boinc_schema_capnp.Users.new_message()
+			    captn_user = Users.init('user', len(file_content['users']['user'])) # Initialise an array of 'user' objects
+
+				user_iterator = 0
 				for user in file_content['users']['user']:
 					user_xml_contents = extract_xml_step(user)
 					if user_xml_contents == None:
@@ -146,14 +165,26 @@ def download_extract_stats(project_name, project_url):
 					else:
 						#user_xml_contents['cpid'] = str(bytes.fromhex(user_xml_contents['cpid']))
 						user_xml_contents['cpid'] = str(base64.b64encode(bytes.fromhex(user_xml_contents['cpid'])))
-						# Success!
 						xml_data.append(user_xml_contents)
+
+						current_id = np.int64(user_xml_contents['id'])
+						current_total_credit = float(user_xml_contents['total_credit'])
+						current_expavg_credit = float(user_xml_contents['expavg_credit'])
+						current_cpid = user_xml_contents['cpid']
+
 						# Protobuffer
 						proto_user = project.users.add()
-						proto_user.id = np.int64(user_xml_contents['id'])
-						proto_user.total_credit = float(user_xml_contents['total_credit'])
-						proto_user.expavg_credit = float(user_xml_contents['expavg_credit'])
-						proto_user.cpid = user_xml_contents['cpid']
+						proto_user.id = current_id
+						proto_user.total_credit = current_total_credit
+						proto_user.expavg_credit = current_expavg_credit
+						proto_user.cpid = current_cpid
+
+						# Captn Proto
+					    captn_user[user_iterator].id = current_id
+					    captn_user[user_iterator].total_credit = current_total_credit
+					    captn_user[user_iterator].expavg_credit = current_expavg_credit
+					    captn_user[user_iterator].cpid = current_cpid
+						user_iterator += 1 # For iterating captn_user
 
 				now = pendulum.now() # Getting the time
 				current_timestamp = int(round(now.timestamp())) # Converting to timestamp
@@ -165,8 +196,10 @@ def download_extract_stats(project_name, project_url):
 				before_protobuf_write = pendulum.now() # Getting the time
 				write_protobuffer_to_disk('./STATS_DUMP/' + project_name + '.proto_bin', project)
 				after_protobuf_write = pendulum.now() # Getting the time
-
-				return before_json_write, before_msgpack_write, before_protobuf_write, after_protobuf_write
+				before_captn_write = pendulum.now() # Getting the time
+				write_captnproto_to_disk('./STATS_DUMP/' + project_name + '.captn_bin', Users)
+				after_captn_write = pendulum.now() # Getting the time
+				return before_json_write, before_msgpack_write, before_protobuf_write, after_protobuf_write, before_captn_write, after_captn_write
 
 			else:
 				print("ERROR: {}".format(project_name))
@@ -182,12 +215,14 @@ def initialize_project_data():
 
 	all_projects_time_taken_list = []
 
+	current_project_value = 0
 	for project in init_project:
 		"""Iterating over all projects in config file"""
 		print("Checking : {}".format(project['project_name']))
-		before_json_write, before_msgpack_write, before_protobuf_write, after_protobuf_write = download_extract_stats(project['project_name'], project['user_gz_url'])
+		before_json_write, before_msgpack_write, before_protobuf_write, after_protobuf_write = download_extract_stats(project['project_name'], project['user_gz_url'], current_project_value)
 		print("DUCK!")
 		all_projects_time_taken_list.append({'project_name': project['project_name'], 'time_to_write_json': before_json_write.diff(before_msgpack_write).in_words(), 'time_to_write_msgpack': before_msgpack_write.diff(before_protobuf_write).in_words(), 'time_to_write_protobuf': before_protobuf_write.diff(after_protobuf_write).in_words()})
+		current_project_value += 1 # Iterator for captn proto
 
 	print(all_projects_time_taken_list)
 
