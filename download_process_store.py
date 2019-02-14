@@ -180,10 +180,10 @@ def download_extract_stats(project_name, project_url, quantity_projects):
 						proto_user.cpid = current_cpid
 
 						# Captn Proto
-					    captn_user[user_iterator].id = current_id
-					    captn_user[user_iterator].total_credit = current_total_credit
-					    captn_user[user_iterator].expavg_credit = current_expavg_credit
-					    captn_user[user_iterator].cpid = current_cpid
+						captn_user[user_iterator].id = current_id
+						captn_user[user_iterator].total_credit = current_total_credit
+						captn_user[user_iterator].expavg_credit = current_expavg_credit
+						captn_user[user_iterator].cpid = current_cpid
 						user_iterator += 1 # For iterating captn_user
 
 				now = pendulum.now() # Getting the time
@@ -219,7 +219,7 @@ def initialize_project_data():
 	for project in init_project:
 		"""Iterating over all projects in config file"""
 		print("Checking : {}".format(project['project_name']))
-		before_json_write, before_msgpack_write, before_protobuf_write, after_protobuf_write = download_extract_stats(project['project_name'], project['user_gz_url'], current_project_value)
+		before_json_write, before_msgpack_write, before_protobuf_write, after_protobuf_write, before_captn_write, after_captn_write = download_extract_stats(project['project_name'], project['user_gz_url'], current_project_value)
 		print("DUCK!")
 		all_projects_time_taken_list.append({'project_name': project['project_name'], 'time_to_write_json': before_json_write.diff(before_msgpack_write).in_words(), 'time_to_write_msgpack': before_msgpack_write.diff(before_protobuf_write).in_words(), 'time_to_write_protobuf': before_protobuf_write.diff(after_protobuf_write).in_words()})
 		current_project_value += 1 # Iterator for captn proto

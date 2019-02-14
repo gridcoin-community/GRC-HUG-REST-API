@@ -2,7 +2,6 @@
 
 struct User {
   id @0 :UInt32;
-  name @1 :Text;
   total_credit @1 :Float64;
   expavg_credit @2 :Float64;
   cpid @3 :Text;
